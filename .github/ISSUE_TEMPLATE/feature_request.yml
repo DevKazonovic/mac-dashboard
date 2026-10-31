@@ -1,0 +1,19 @@
+name: Feature request
+description: Something the dashboard should show or warn you about
+labels: [enhancement]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: What you wanted to know about your Mac
+      description: The question you had that the dashboard didn't answer.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What the dashboard could show
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else

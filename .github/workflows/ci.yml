@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        node: [18, 20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Check syntax
+        run: npm run check
+      - name: Run the tests
+        run: npm test
+      - name: Check the package contents
+        run: npm pack --dry-run
+      - name: Start the dashboard and read its data
+        run: |
+          node bin/mac-dashboard.js --no-open --port 3738 > dashboard.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:3738/api/state | grep -q '"ready":true'; then
+              echo "The dashboard answered with data"
+              exit 0
+            fi
+            sleep 1
+          done
+          cat dashboard.log
+          exit 1

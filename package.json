@@ -1,0 +1,55 @@
+{
+  "name": "mac-dashboard",
+  "version": "1.0.0",
+  "description": "See what is slowing down your Mac: a local dashboard for RAM, swap, processor and disk that groups hundreds of processes into the apps you know and tells you what to close.",
+  "keywords": [
+    "macos",
+    "mac",
+    "memory",
+    "ram",
+    "swap",
+    "memory-pressure",
+    "memory-monitor",
+    "system-monitor",
+    "activity-monitor",
+    "performance",
+    "dashboard",
+    "docker",
+    "developer-tools",
+    "cli"
+  ],
+  "homepage": "https://github.com/DevKazonovic/mac-dashboard#readme",
+  "bugs": {
+    "url": "https://github.com/DevKazonovic/mac-dashboard/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DevKazonovic/mac-dashboard.git"
+  },
+  "author": "DevKazonovic",
+  "bin": {
+    "mac-dashboard": "bin/mac-dashboard.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "public",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "start": "node bin/mac-dashboard.js",
+    "dev": "node --watch bin/mac-dashboard.js --no-open --port 3739",
+    "demo": "node bin/mac-dashboard.js --demo --port 3799",
+    "check": "node scripts/check.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "os": [
+    "darwin"
+  ],
+  "private": true,
+  "license": "MIT"
+}

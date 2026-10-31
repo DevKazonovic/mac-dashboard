@@ -1,0 +1,45 @@
+name: Bug report
+description: A wrong number, a wrong name, or something that doesn't work
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for reporting this. Please check that it still happens after `mac-dashboard update`.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead. A screenshot helps.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to make it happen
+      placeholder: 1. Run mac-dashboard enable…
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version and chip
+      placeholder: macOS 15.1 on Apple M2
+    validations:
+      required: true
+  - type: input
+    id: node
+    attributes:
+      label: Node.js version
+      description: The output of `node --version`
+      placeholder: v20.11.1
+    validations:
+      required: true
+  - type: textarea
+    id: status
+    attributes:
+      label: Output of mac-dashboard status
+      render: text
+  - type: textarea
+    id: log
+    attributes:
+      label: Last lines of the log
+      description: From ~/Library/Logs/mac-dashboard/dashboard.log
+      render: text
