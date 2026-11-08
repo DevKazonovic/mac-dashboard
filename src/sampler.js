@@ -26,6 +26,7 @@ function createSampler() {
   let dockerBusy = false
   let tick = 0
   let latest = null
+  let latestDetails = null
   let error = null
 
   function startTop() {
@@ -111,7 +112,7 @@ function createSampler() {
         .split('\n')
         .filter(Boolean)
         .map((line) => JSON.parse(line))
-        .map((row) => ({ name: row.Name, bytes: system.parseDockerSize(String(row.MemUsage || '').split('/')[0]) }))
+        .map((row) => ({ name: row.Name, bytes: system.parseDockerSize(String(row.MemUsage || '').split('/')[0]), cpu: parseFloat(row.CPUPerc) || 0 }))
       cache.docker = { containers }
       if (!cache.dockerLimit || tick % 12 === 0) {
         const info = await system.run('docker', ['info', '--format', '{{.MemTotal}}'], { timeout: 20000 })
@@ -187,6 +188,7 @@ function createSampler() {
       chromeProfiles: cache.chromeProfiles,
     }
     const result = classify.build(processes, context)
+    latestDetails = { processes, facts: result.facts, context, cores: Number(coresLine) || 1 }
     trackCpu(processes, cpuValid, now)
     history.push({ at: now, bytes: new Map(result.groups.map((group) => [group.key, group.bytes])) })
     while (history.length && now - history[0].at > HISTORY_MS) history.shift()
@@ -226,7 +228,11 @@ function createSampler() {
     return { ...latest, storage, error }
   }
 
-  return { start, stop, snapshot }
+  function details() {
+    return latestDetails
+  }
+
+  return { start, stop, snapshot, details }
 }
 
 module.exports = { createSampler }

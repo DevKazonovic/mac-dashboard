@@ -29,6 +29,7 @@ There is nothing to install. mac-dashboard has no dependencies and no build step
 | `src/checks.js` | Decides the verdict and what needs attention. |
 | `src/present.js` | Turns all of that into the text the page shows. |
 | `src/storage.js` | Measures caches and build folders once an hour. |
+| `src/background.js` | Builds the Background page: reads `launchctl`, `lsappinfo`, `lsof` and `docker ps` while the page is open, and places every process in one row. |
 | `src/commands.js` | The `start`, `stop`, `restart`, `status`, `enable`, `disable` and `update` commands. |
 | `src/demo.js` | The made-up data for `npm run demo`. |
 | `public/` | The page. It only renders what the server sends. |
@@ -36,7 +37,7 @@ There is nothing to install. mac-dashboard has no dependencies and no build step
 ## Guidelines
 
 - Keep it free of dependencies. Use what Node.js and macOS already have.
-- Never send a process's command line to the page. Show app names, folder names and sizes only.
+- Never send a process's command line to the page. Show names of apps, programs, services and containers, folder names, process IDs, ports and sizes only.
 - Never delete or change anything on the user's Mac. The dashboard only reads.
 - Write page text in plain, everyday words, and put explanations in the info tooltips.
 - Add or update a test when you change how a number is read or a process is grouped.

@@ -65,6 +65,58 @@ test('reads Docker sizes in both unit styles', () => {
   assert.equal(system.parseDockerSize('512MiB'), 512 * 1024 ** 2)
 })
 
+test('reads running services from launchctl list and print', () => {
+  const list = system.parseServices('PID\tStatus\tLabel\n-\t0\tcom.example.idle\n4321\t-9\tcom.example.running\n')
+  assert.deepEqual([...list], [[4321, 'com.example.running']])
+  const printed = system.parseServices(
+    ['system = {', '\tservice count = 431', '\tservices = {', '\t\t       0      - \tcom.vix.cron', '\t\t     297      - \torg.pqrs.daemon', '\t\t   25850   (pe) \tcom.apple.logd_helper', '\t}', '}'].join('\n'),
+  )
+  assert.deepEqual([...printed], [[297, 'org.pqrs.daemon'], [25850, 'com.apple.logd_helper']])
+})
+
+test('finds the bundles of apps with a Dock icon', () => {
+  const bundles = system.parseForegroundApps(
+    [
+      ' 1) "Google Chrome" ASN:0x0-0x1c01c: ',
+      '    bundleID="com.google.Chrome"',
+      '    bundle path="/Applications/Google Chrome.app"',
+      '    pid = 27721 type="Foreground" flavor=3 Version="1"',
+      ' 2) "Rectangle" ASN:0x0-0x2002: ',
+      '    bundle path="/Applications/Rectangle.app"',
+      '    pid = 1063 type="UIElement" flavor=3',
+      ' 3) "universalaccessd" ASN:0x0-0x8008: ',
+      '    bundle path="/usr/sbin/universalaccessd"',
+      '    pid = 423 !signalled type="BackgroundOnly" flavor=3',
+      ' 4) "Docker Desktop" ASN:0x0-0x9009: ',
+      '    bundle path="/Applications/Docker.app/Contents/MacOS/Docker Desktop.app"',
+      '    pid = 19629 type="Foreground" flavor=3',
+    ].join('\n'),
+  )
+  assert.deepEqual([...bundles], ['/Applications/Google Chrome.app', '/Applications/Docker.app'])
+})
+
+test('reads listening ports from lsof', () => {
+  const ports = system.parseListeners('p1048\nf16\nn127.0.0.1:3738\np23059\nf20\nn*:24678\nf21\nn*:3001\nf22\nn[::1]:3001\n')
+  assert.deepEqual(ports.get(1048), [3738])
+  assert.deepEqual(ports.get(23059), [3001, 24678])
+})
+
+test('reads running containers from docker ps', () => {
+  const [mysql, web, worker] = system.parseContainers(
+    [
+      'video-studio-mysql\tmysql:8.4\trunning\tUp 11 hours (healthy)\t127.0.0.1:3340->3306/tcp\tvideo-studio',
+      'web\tshop-web\trestarting\tRestarting (1) 5 seconds ago\t\t',
+      'worker\tshop-worker\trunning\tUp About a minute (unhealthy)\t0.0.0.0:8000-8002->8000-8002/tcp, [::]:8000-8002->8000-8002/tcp\tshop',
+    ].join('\n'),
+  )
+  assert.deepEqual(mysql, { name: 'video-studio-mysql', image: 'mysql:8.4', project: 'video-studio', state: 'running', health: '', uptime: 11 * 3600, ports: ['3340'] })
+  assert.equal(web.state, 'restarting')
+  assert.equal(web.uptime, 0)
+  assert.equal(worker.health, 'unhealthy')
+  assert.equal(worker.uptime, 60)
+  assert.deepEqual(worker.ports, ['8000-8002'])
+})
+
 test('formats sizes and durations for people', () => {
   assert.equal(format.memory(16 * 1024 ** 3), '16 GB')
   assert.equal(format.memory(3.7 * 1024 ** 3), '3.7 GB')

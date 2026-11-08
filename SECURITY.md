@@ -18,4 +18,4 @@ Please report it privately through [GitHub's private vulnerability reporting](ht
 - It never contacts any server.
 - Its page has a strict Content Security Policy and shows every value as plain text.
 
-Like Activity Monitor, the page shows which apps run on your Mac. Any program that already runs as your user can open it too.
+Like Activity Monitor, the page shows which apps, programs, services and containers run on your Mac, and which ports they listen on. Any program that already runs as your user can open it too.

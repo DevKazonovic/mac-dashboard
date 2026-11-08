@@ -13,11 +13,33 @@
   </head>
   <body>
     <a class="skip-link" href="#content">Skip to content</a>
+    <aside class="sidebar" aria-label="Sidebar">
+      <a class="brand" href="/" data-page="overview">
+        <img src="/favicon.svg" alt="" width="24" height="24">
+        <span>Mac dashboard</span>
+      </a>
+      <nav class="nav" aria-label="Pages">
+        <a class="nav-item" href="/" data-page="overview" aria-current="page">Overview</a>
+        <a class="nav-item" href="/background" data-page="background">Background</a>
+      </nav>
+    </aside>
+    <div class="subnav">
+      <nav class="subnav-inner" aria-labelledby="subnav-title">
+        <p class="subnav-title" id="subnav-title"></p>
+        <ul class="subnav-list" id="groups" data-ready></ul>
+        <div class="subnav-list subnav-loading" data-loading aria-hidden="true">
+          <div class="skeleton line"></div>
+          <div class="skeleton line"></div>
+          <div class="skeleton line"></div>
+          <div class="skeleton line"></div>
+        </div>
+      </nav>
+    </div>
     <main class="page" id="content" tabindex="-1">
       <header class="page-head">
         <div class="page-heading">
-          <h1 class="page-title" id="verdict-title">Checking your Mac…</h1>
-          <p class="page-intro" id="verdict-text" data-ready></p>
+          <h1 class="page-title" id="heading">Checking your Mac…</h1>
+          <p class="page-intro" id="intro" data-ready></p>
           <div class="skeleton line wide" data-loading></div>
         </div>
         <p class="page-meta" id="updated"></p>
@@ -30,7 +52,7 @@
         <button class="button" id="retry" type="button">Try again</button>
       </div>
 
-      <section class="tiles" aria-label="Summary">
+      <section class="tiles" aria-label="Summary" data-view="overview">
         <article class="card tile" aria-labelledby="memory-title">
           <div class="tile-head">
             <h2 class="tile-label" id="memory-title">Memory</h2>
@@ -102,17 +124,25 @@
         </article>
       </section>
 
-      <section class="section" id="problems-section" aria-labelledby="problems-title" hidden>
+      <section class="section" aria-labelledby="problems-title" data-view="overview" data-group="problems" hidden>
         <div class="section-head">
           <div class="section-heading">
             <h2 class="section-title" id="problems-title">Needs attention</h2>
             <span class="badge" id="problems-count"></span>
           </div>
         </div>
-        <ul class="problems" id="problems"></ul>
+        <ul class="card-list" id="problems" data-ready></ul>
+        <div class="state" id="problems-empty" data-ready hidden>
+          <p class="state-title">Nothing needs attention</p>
+          <p class="state-text">Anything wrong with your memory, processor, disk or dev servers appears here.</p>
+        </div>
+        <div class="card-list" data-loading aria-hidden="true">
+          <div class="skeleton-row"><div class="skeleton line"></div><div class="skeleton line"></div><div class="skeleton line"></div></div>
+          <div class="skeleton-row"><div class="skeleton line"></div><div class="skeleton line"></div><div class="skeleton line"></div></div>
+        </div>
       </section>
 
-      <section class="section" aria-labelledby="usage-title">
+      <section class="section" aria-labelledby="usage-title" data-view="overview" data-group="usage">
         <div class="section-head">
           <div class="section-heading">
             <h2 class="section-title" id="usage-title">Using memory</h2>
@@ -134,7 +164,7 @@
         </div>
       </section>
 
-      <section class="section" aria-labelledby="storage-title">
+      <section class="section" aria-labelledby="storage-title" data-view="overview" data-group="storage" hidden>
         <div class="section-head">
           <div class="section-heading">
             <h2 class="section-title" id="storage-title">Space you can free</h2>
@@ -156,6 +186,14 @@
           <div class="skeleton-row"><div class="skeleton line"></div><div class="skeleton line"></div><div class="skeleton line"></div></div>
         </div>
       </section>
+
+      <div class="view" id="background-sections" data-view="background" data-ready></div>
+      <div class="card-list" data-view="background" data-loading aria-hidden="true">
+        <div class="skeleton-row"><div class="skeleton line"></div><div class="skeleton line"></div><div class="skeleton line"></div></div>
+        <div class="skeleton-row"><div class="skeleton line"></div><div class="skeleton line"></div><div class="skeleton line"></div></div>
+        <div class="skeleton-row"><div class="skeleton line"></div><div class="skeleton line"></div><div class="skeleton line"></div></div>
+        <div class="skeleton-row"><div class="skeleton line"></div><div class="skeleton line"></div><div class="skeleton line"></div></div>
+      </div>
     </main>
   </body>
 </html>

@@ -134,6 +134,7 @@ function createStorage({ projectDirs = [] } = {}) {
     return {
       status: state.status,
       meta,
+      total: total ? format.disk(total) : '',
       error: state.error,
       items: state.items.map((item) => ({ key: item.key, name: item.name, size: format.disk(item.bytes), how: item.how, command: item.command })),
     }

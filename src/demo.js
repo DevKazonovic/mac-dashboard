@@ -1,8 +1,18 @@
 const format = require('./format')
 const present = require('./present')
+const background = require('./background')
 
 const { GIB, MIB } = format
 const MINUTE = 60 * 1000
+const HOUR_SECONDS = 3600
+const MACOS_PROGRAMS = ['distnoted', 'cfprefsd', 'trustd', 'mds_stores', 'coreaudiod', 'syspolicyd', 'launchservicesd', 'WindowServer', 'mediaremoted', 'sharingd', 'bluetoothd', 'logd', 'notifyd', 'securityd', 'tccd']
+const OPEN_BUNDLES = {
+  Chrome: '/Applications/Google Chrome.app',
+  'VS Code': '/Applications/Visual Studio Code.app',
+  Slack: '/Applications/Slack.app',
+  Terminal: '/System/Applications/Utilities/Terminal.app',
+  Finder: '/System/Library/CoreServices/Finder.app',
+}
 
 function group(key, name, parts, cpu = 0) {
   const map = new Map(parts.map(([part, bytes, count = 1]) => [part, { key: part, name: part, bytes, count }]))
@@ -137,6 +147,7 @@ function createDemoStorage() {
       return {
         status: 'ready',
         meta: `${format.disk(total)} in total, measured ${format.ago(measuredAt)}`,
+        total: format.disk(total),
         error: null,
         items: items.map((item) => ({ key: item.key, name: item.name, size: format.disk(item.bytes), how: item.how, command: item.command })),
       }
@@ -144,4 +155,130 @@ function createDemoStorage() {
   }
 }
 
-module.exports = { createDemoSampler, createDemoStorage }
+function demoProcesses() {
+  const processes = []
+  const add = (pid, ppid, file, options = {}) => {
+    processes.push({ pid, ppid, path: file, args: options.args || '', age: options.age || 5 * HOUR_SECONDS, mem: options.mem || 0, cpu: options.cpu || 0 })
+    return pid
+  }
+  add(0, 0, 'kernel_task', { mem: 2.1 * GIB, cpu: 30 })
+  add(1, 0, '/sbin/launchd', { mem: 28 * MIB })
+  MACOS_PROGRAMS.forEach((name, index) => {
+    for (let copy = 0; copy < 20; copy++) add(1000 + index * 100 + copy, 1, `/usr/libexec/${name}`, { mem: (6 + ((index * 7 + copy * 3) % 40)) * MIB, age: 40 * HOUR_SECONDS })
+  })
+
+  add(3000, 1, `${OPEN_BUNDLES.Chrome}/Contents/MacOS/Google Chrome`, { mem: 540 * MIB, cpu: 14 })
+  for (let tab = 0; tab < 24; tab++) add(3001 + tab, 3000, `${OPEN_BUNDLES.Chrome}/Contents/Frameworks/Google Chrome Helper (Renderer).app/Contents/MacOS/Google Chrome Helper (Renderer)`, { args: '--type=renderer', mem: (120 + tab * 9) * MIB, cpu: 2 })
+  add(3100, 1, `${OPEN_BUNDLES['VS Code']}/Contents/MacOS/Electron`, { mem: 410 * MIB, cpu: 4 })
+  for (let helper = 0; helper < 8; helper++) add(3101 + helper, 3100, `${OPEN_BUNDLES['VS Code']}/Contents/Frameworks/Code Helper (Plugin).app/Contents/MacOS/Code Helper (Plugin)`, { mem: 210 * MIB, cpu: 3 })
+  add(3200, 1, `${OPEN_BUNDLES.Slack}/Contents/MacOS/Slack`, { mem: 1.1 * GIB, cpu: 8 })
+  add(3300, 1, `${OPEN_BUNDLES.Terminal}/Contents/MacOS/Terminal`, { mem: 58 * MIB })
+  add(3301, 3300, '/usr/bin/login', { mem: 2 * MIB })
+  add(3302, 3301, '/bin/zsh', { mem: 6 * MIB })
+  add(3400, 1, `${OPEN_BUNDLES.Finder}/Contents/MacOS/Finder`, { mem: 92 * MIB })
+
+  add(4000, 1, '/Applications/Docker.app/Contents/MacOS/com.docker.backend', { mem: 330 * MIB, cpu: 4 })
+  add(4001, 4000, '/Applications/Docker.app/Contents/MacOS/com.docker.build', { mem: 42 * MIB })
+  add(4002, 1, '/System/Library/Frameworks/Virtualization.framework/Versions/A/XPCServices/com.apple.Virtualization.VirtualMachine.xpc/Contents/MacOS/com.apple.Virtualization.VirtualMachine', { mem: 3.3 * GIB, cpu: 60 })
+
+  add(4100, 1, '/bin/bash', { mem: 2 * MIB, age: 3 * HOUR_SECONDS + 12 * 60 })
+  add(4101, 4100, '/Users/demo/.sdkman/candidates/java/21/bin/java', { args: 'java -cp app.jar com.storefront.Application --spring.profiles.active=local', mem: 1.2 * GIB, cpu: 90, age: 3 * HOUR_SECONDS + 12 * 60 })
+  add(4200, 3302, '/opt/homebrew/bin/node', { args: 'node /Users/demo/Projects/storefront-web/node_modules/.bin/vite', mem: 310 * MIB, cpu: 6, age: 2 * HOUR_SECONDS })
+  add(4201, 4200, '/Users/demo/Projects/storefront-web/node_modules/@esbuild/darwin-arm64/bin/esbuild', { mem: 42 * MIB, age: 2 * HOUR_SECONDS })
+  add(4300, 3302, '/opt/homebrew/bin/python3.13', { args: 'python3 worker.py', mem: 640 * MIB, cpu: 40, age: 26 * 60 })
+  add(4400, 1, '/Users/demo/.sdkman/candidates/java/21/bin/java', { args: 'java org.gradle.launcher.daemon.bootstrap.GradleDaemon 8.13', mem: 1.4 * GIB, age: 47 * 60 })
+  add(4401, 1, '/Users/demo/.sdkman/candidates/java/21/bin/java', { args: 'java org.jetbrains.kotlin.daemon.KotlinCompileDaemon', mem: 980 * MIB, age: 47 * 60 })
+  for (let session = 0; session < 5; session++) {
+    add(4500 + session * 10, 3101, '/Users/demo/.local/bin/claude', { mem: (180 + session * 40) * MIB, cpu: session === 0 ? 12 : 1, age: (session + 1) * HOUR_SECONDS })
+    add(4501 + session * 10, 4500 + session * 10, '/bin/zsh', { mem: 5 * MIB, age: 600 })
+  }
+  add(4600, 1, '/Users/demo/Library/Android/sdk/platform-tools/adb', { mem: 11 * MIB, age: 30 * HOUR_SECONDS })
+  add(4700, 1, 'zsh', { mem: 3 * MIB, age: 9 * HOUR_SECONDS })
+  add(4701, 1, 'zsh', { mem: 3 * MIB, age: 9 * HOUR_SECONDS })
+  add(4702, 4700, '/Users/demo/.cache/gitstatus/gitstatusd-darwin-arm64', { mem: 2 * MIB, age: 9 * HOUR_SECONDS })
+  add(4800, 1, '/Users/demo/Projects/a-very-long-folder-name-for-a-background-worker-that-never-breaks/bin/worker', { mem: 400 * 1024, age: 40 })
+
+  add(5000, 1, '/bin/bash', { mem: 3 * MIB, age: 40 * HOUR_SECONDS })
+  add(5001, 5000, './externals/node24/bin/node', { mem: 96 * MIB, age: 40 * HOUR_SECONDS })
+  add(5002, 5001, '/Users/demo/actions-runners/storefront/bin/Runner.Listener', { mem: 180 * MIB, age: 40 * HOUR_SECONDS })
+  add(5100, 1, '/opt/homebrew/opt/redis/bin/redis-server', { mem: 18 * MIB, age: 72 * HOUR_SECONDS })
+  add(5200, 1, '/opt/homebrew/bin/node', { mem: 62 * MIB, cpu: 2, age: 72 * HOUR_SECONDS })
+  add(5201, 5200, 'top', { mem: 4 * MIB, age: 72 * HOUR_SECONDS })
+  add(5300, 1, '/Library/PrivilegedHelperTools/com.docker.vmnetd', { mem: 8 * MIB, age: 72 * HOUR_SECONDS })
+  add(5400, 1, '/Library/Google/GoogleSoftwareUpdate/GoogleSoftwareUpdate.bundle/Contents/MacOS/GoogleSoftwareUpdateDaemon', { mem: 14 * MIB, age: 6 * HOUR_SECONDS })
+
+  add(6000, 1, '/Applications/Rectangle.app/Contents/MacOS/Rectangle', { mem: 74 * MIB, age: 72 * HOUR_SECONDS })
+  add(6100, 1, '/Applications/Raycast.app/Contents/MacOS/Raycast', { mem: 310 * MIB, cpu: 3, age: 72 * HOUR_SECONDS })
+  add(6101, 6100, '/Applications/Raycast.app/Contents/MacOS/Raycast Helper', { mem: 40 * MIB, age: 72 * HOUR_SECONDS })
+  add(6200, 1, '/Users/demo/Applications/Old Editor.app/Contents/Frameworks/Electron Framework.framework/Helpers/chrome_crashpad_handler', { mem: 3 * MIB, age: 90 * HOUR_SECONDS })
+  return processes
+}
+
+function demoScan() {
+  return {
+    foreground: new Set(Object.values(OPEN_BUNDLES)),
+    services: new Map([
+      [5000, 'actions.runner.storefront-app.demo-mini-storefront'],
+      [5100, 'homebrew.mxcl.redis'],
+      [5200, 'io.github.devkazonovic.mac-dashboard'],
+      [5300, 'com.docker.vmnetd'],
+      [5400, 'com.google.keystone.daemon'],
+      ...MACOS_PROGRAMS.map((name, index) => [1000 + index * 100, `com.apple.${name}`]),
+    ]),
+    ports: new Map([
+      [4101, [8080]],
+      [4200, [5173, 24678]],
+      [4600, [5037]],
+      [5100, [6379]],
+      [5200, [3738]],
+    ]),
+    docker: {
+      state: 'ready',
+      error: null,
+      containers: [
+        { name: 'api', image: 'storefront-api', project: 'storefront', state: 'running', health: '', uptime: 3 * HOUR_SECONDS, ports: ['8081'] },
+        { name: 'postgres', image: 'postgres:17', project: 'storefront', state: 'running', health: 'unhealthy', uptime: 3 * HOUR_SECONDS, ports: ['5432'] },
+        { name: 'web', image: 'storefront-web', project: 'storefront', state: 'restarting', health: '', uptime: 0, ports: [] },
+        { name: 'redis', image: 'redis:8', project: '', state: 'paused', health: '', uptime: 600, ports: [] },
+        { name: 'mailpit', image: 'axllent/mailpit', project: 'storefront', state: 'running', health: 'starting', uptime: 20, ports: ['1025', '8025'] },
+      ],
+    },
+    errors: [],
+  }
+}
+
+function createDemoBackground() {
+  const details = {
+    processes: demoProcesses(),
+    facts: { projects: new Map([['storefront-api', { detached: true }]]), sessions: 5, devices: 0 },
+    context: {
+      selfPid: -1,
+      cwd: new Map([
+        [4101, '/Users/demo/Projects/storefront-api'],
+        [4200, '/Users/demo/Projects/storefront-web'],
+        [4300, '/Users/demo/Projects/ml-worker'],
+        [4500, '/Users/demo/Projects/storefront-api'],
+        [4510, '/Users/demo/Projects/storefront-web'],
+        [4520, '/Users/demo/Projects/storefront-web'],
+        [4530, '/Users/demo/Projects/ml-worker'],
+        [4540, '/Users/demo/Projects/mobile-app'],
+      ]),
+      docker: {
+        containers: [
+          { name: 'api', bytes: 980 * MIB, cpu: 24 },
+          { name: 'postgres', bytes: 612 * MIB, cpu: 8 },
+          { name: 'web', bytes: 540 * MIB, cpu: 0 },
+          { name: 'redis', bytes: 64 * MIB, cpu: 0 },
+        ],
+      },
+    },
+    cores: 10,
+  }
+  return {
+    view() {
+      return background.buildView({ ...details, scan: demoScan() })
+    },
+  }
+}
+
+module.exports = { createDemoSampler, createDemoStorage, createDemoBackground }

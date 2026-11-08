@@ -4,7 +4,9 @@ const path = require('path')
 const { spawn } = require('child_process')
 const { createSampler } = require('./sampler')
 const { createStorage } = require('./storage')
-const { createDemoSampler, createDemoStorage } = require('./demo')
+const { createBackground } = require('./background')
+const { createDemoSampler, createDemoStorage, createDemoBackground } = require('./demo')
+const present = require('./present')
 const { APP_ID, HOST } = require('./paths')
 const { version: VERSION } = require('../package.json')
 
@@ -14,6 +16,7 @@ const PAGE = ['index.html', 'text/html; charset=utf-8']
 const STATIC_FILES = {
   '/': PAGE,
   '/index.html': PAGE,
+  '/background': PAGE,
   '/styles.css': ['styles.css', 'text/css; charset=utf-8'],
   '/app.js': ['app.js', 'text/javascript; charset=utf-8'],
   '/favicon.svg': ['favicon.svg', 'image/svg+xml'],
@@ -42,7 +45,7 @@ function sameOrigin(req) {
   return req.headers.origin === `http://${req.headers.host}`
 }
 
-function createHandler(sampler, storage, port, log) {
+function createHandler(sampler, storage, background, port, log) {
   const allowedHosts = new Set([`${HOST}:${port}`, `localhost:${port}`])
   return (req, res) => {
     if (!allowedHosts.has(req.headers.host)) return send(res, 403, 'Forbidden', 'text/plain; charset=utf-8')
@@ -51,7 +54,11 @@ function createHandler(sampler, storage, port, log) {
       if (req.method === 'GET' && url.pathname === '/api/health') {
         return sendJson(res, 200, { app: APP_ID, version: VERSION, status: 'ready', pid: process.pid })
       }
-      if (req.method === 'GET' && url.pathname === '/api/state') return sendJson(res, 200, sampler.snapshot(storage.view()))
+      if (req.method === 'GET' && url.pathname === '/api/state') {
+        const snapshot = sampler.snapshot(storage.view())
+        return sendJson(res, 200, snapshot.ready ? { ...snapshot, groups: present.groups(snapshot) } : snapshot)
+      }
+      if (req.method === 'GET' && url.pathname === '/api/background') return sendJson(res, 200, background.view())
       if (req.method === 'POST' && url.pathname === '/api/storage/measure') {
         if (!sameOrigin(req)) return sendJson(res, 403, { error: 'This request did not come from the dashboard page.' })
         storage.measure()
@@ -136,7 +143,8 @@ async function start(options) {
     }
     const sampler = options.demo ? createDemoSampler() : createSampler()
     const storage = options.demo ? createDemoStorage() : createStorage({ projectDirs: options.projectDirs })
-    const server = http.createServer(createHandler(sampler, storage, port, (text) => console.error(text)))
+    const background = options.demo ? createDemoBackground() : createBackground(sampler)
+    const server = http.createServer(createHandler(sampler, storage, background, port, (text) => console.error(text)))
     try {
       await listen(server, port)
     } catch (error) {

@@ -14,7 +14,7 @@ A local dashboard for your Mac's RAM, swap, processor and disk. It groups hundre
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png">
-  <img alt="mac-dashboard: a verdict that the Mac is short on RAM, memory, processor and disk at a glance, three problems that need attention, and the apps using memory with Docker opened to show its containers" src="docs/screenshot-light.png" width="900">
+  <img alt="mac-dashboard: a verdict that the Mac is short on RAM, memory, processor and disk at a glance, a small sidebar listing each group with its total, and the apps using memory with Docker opened to show its containers" src="docs/screenshot-light.png" width="900">
 </picture>
 
 </div>
@@ -65,11 +65,13 @@ To try it once without installing anything, run `npx -y github:DevKazonovic/mac-
 - **Memory, processor and disk at a glance.** How your RAM is split between apps, macOS and compressed memory, how much swap is in use, how busy the processor is, and how much disk is free.
 - **Using memory.** Chrome, Brave, Edge and Arc with their page counts; VS Code, Cursor and Windsurf with their window counts; Docker with each container; Flutter, Gradle, the iOS Simulator, Claude Code and your dev servers by project. Open a row to see what is inside it.
 - **Space you can free.** Caches and build folders over 300 MB, such as the Docker build cache, Xcode build data, Gradle and npm caches, measured once an hour, with how to clear each one. Nothing is deleted for you.
+- **Background page.** Everything running that you can't see: Docker containers, dev servers and other programs by folder, launchd services, and apps with no Dock icon, each with its ports, how long it has run, its processor use and its memory. macOS's own services and your open apps are listed apart, so nothing is hidden.
+- **One group at a time.** A small second sidebar lists each page's groups with their totals. Pick one and it fills the page, so you don't have to scroll.
 - **Light and dark mode**, following your Mac.
 
 ## How it works
 
-The dashboard keeps one `top` running and reads `ps`, `sysctl`, `vm_stat`, `df`, `lsof` and `docker` every 5 seconds. It uses about 1.5% of one processor core and 35 MB of memory.
+The dashboard keeps one `top` running and reads `ps`, `sysctl`, `vm_stat`, `df`, `lsof` and `docker` every 5 seconds. It uses about 1.5% of one processor core and 35 MB of memory. The Background page also reads `launchctl`, `lsappinfo`, `lsof` and `docker ps`, only while that page is open.
 
 Each app's number is its memory footprint, the same number Activity Monitor shows: the memory it uses, including what macOS compressed or moved to disk for it. Adding every app's footprint gives how much memory your apps want. When that is more than your RAM, macOS compresses memory and then uses the disk as swap, and that is when your Mac feels slow. The verdict follows macOS's own memory pressure, so it says short on RAM exactly when macOS thinks so.
 
@@ -78,7 +80,7 @@ Each app's number is its memory footprint, the same number Activity Monitor show
 Everything stays on your Mac.
 
 - It only listens on `127.0.0.1`, and rejects requests from other sites and other host names.
-- It never shows a process's command line, because command lines can hold passwords and tokens. It shows app names, folder names and sizes.
+- It never shows a process's command line, because command lines can hold passwords and tokens. It shows the names of apps, programs, services and containers, folder names, process IDs, ports and sizes.
 - It only reads. It never deletes, stops or changes your apps or files.
 - It never contacts any server.
 

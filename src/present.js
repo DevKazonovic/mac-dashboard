@@ -168,8 +168,22 @@ function snapshot({ now, sample, result, context, trackers, history, memory, dis
     cpu: cpuTile(sample.cpuBusy, result.groups, memory.cores),
     disk: diskTile(disk),
     problems: checks.problems({ facts: result.facts, groups: result.groups, pressure, disk, trackers, growth, now, total: memory.total }),
-    usage: { meta: `Apps want ${format.memory(memory.demand)}`, groups: usage(result, context, trackers, now) },
+    usage: { meta: `Apps want ${format.memory(memory.demand)}`, total: format.memory(memory.demand), groups: usage(result, context, trackers, now) },
   }
 }
 
-module.exports = { snapshot }
+function groups({ problems, usage: memoryUsage, storage }) {
+  const failed = storage.status === 'failed'
+  return [
+    {
+      key: 'problems',
+      label: 'Needs attention',
+      total: problems.length ? String(problems.length) : '',
+      level: problems.some((problem) => problem.level === 'critical') ? 'critical' : problems.length ? 'warning' : null,
+    },
+    { key: 'usage', label: 'Using memory', total: memoryUsage.total, level: null },
+    { key: 'storage', label: 'Space you can free', total: failed ? 'Failed' : storage.total, level: failed ? 'critical' : null },
+  ]
+}
+
+module.exports = { snapshot, groups }

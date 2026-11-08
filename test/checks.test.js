@@ -1,6 +1,7 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
 const checks = require('../src/checks')
+const present = require('../src/present')
 const { createDemoSampler, createDemoStorage } = require('../src/demo')
 
 const GB = 1024 ** 3
@@ -68,4 +69,15 @@ test('the demo builds a full page of made-up data', () => {
   assert.equal(snapshot.problems.length, 3)
   assert.ok(snapshot.usage.groups.length >= 5)
   assert.equal(snapshot.storage.status, 'ready')
+})
+
+test('the small sidebar counts the problems and shows what is measured', () => {
+  const snapshot = createDemoSampler().snapshot(createDemoStorage().view())
+  const [problems, usage, storage] = present.groups(snapshot)
+  assert.deepEqual(problems, { key: 'problems', label: 'Needs attention', total: '3', level: 'warning' })
+  assert.equal(usage.total, snapshot.usage.total)
+  assert.equal(storage.total, snapshot.storage.total)
+  assert.deepEqual(present.groups({ ...snapshot, problems: [] })[0], { key: 'problems', label: 'Needs attention', total: '', level: null })
+  assert.deepEqual(present.groups({ ...snapshot, problems: [{ level: 'warning' }, { level: 'critical' }] })[0].level, 'critical')
+  assert.deepEqual(present.groups({ ...snapshot, storage: { status: 'failed', total: '' } })[2], { key: 'storage', label: 'Space you can free', total: 'Failed', level: 'critical' })
 })

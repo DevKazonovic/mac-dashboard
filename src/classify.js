@@ -10,7 +10,7 @@ const HEAVY_PAGE_BYTES = 300 * 1024 ** 2
 const SYSTEM_PREFIXES = ['/System/', '/usr/libexec/', '/usr/sbin/', '/sbin/', '/usr/bin/', '/bin/', '/Library/Apple/']
 const DART = new Set(['dart', 'dartvm', 'dartaotruntime'])
 const RUNTIMES = new Set(['java', 'node', 'bun', 'deno', 'php', 'ruby'])
-const PYTHON = /^python3?(\.\d+)?$/
+const PYTHON = /^python3?(\.\d+)?$/i
 const KEEPERS = new Set(['tmux', 'screen', 'sshd', 'mosh-server', 'zellij'])
 const BROWSERS = {
   'Google Chrome': 'Chrome',
@@ -50,6 +50,11 @@ function appName(file) {
   return match ? match[1] : null
 }
 
+function appLabel(file) {
+  const app = appName(file)
+  return BROWSERS[app] || EDITORS[app] || app
+}
+
 function groupName(key) {
   const [kind, ...rest] = key.split(':')
   if (rest.length && ['app', 'browser', 'editor'].includes(kind)) return rest.join(':')
@@ -58,7 +63,7 @@ function groupName(key) {
 
 function needsCwd(proc) {
   const base = path.basename(proc.path)
-  return RUNTIMES.has(base) || PYTHON.test(base) || (proc.args || '').includes('flutter_tools.snapshot run')
+  return RUNTIMES.has(base) || PYTHON.test(base) || base === 'claude' || (proc.args || '').includes('flutter_tools.snapshot run')
 }
 
 function gradleLabel(args) {
@@ -304,4 +309,4 @@ function build(processes, context) {
   return { groups: [...groups.values()], facts }
 }
 
-module.exports = { build, needsCwd, groupName }
+module.exports = { build, needsCwd, groupName, own, projectOf, appLabel, SYSTEM_PREFIXES }

@@ -2,6 +2,19 @@
 
 All notable changes to mac-dashboard are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- A sidebar, and a Background page that lists everything running that you can't see: Docker containers, programs, services and apps with no Dock icon, with their ports, running time, processor use and memory.
+- A small second sidebar on both pages. It lists the page's groups with their totals and shows one group at a time, so the page fits your window instead of scrolling.
+
+### Fixed
+
+- Python programs started from Homebrew's framework build are now named after their folder.
+- Info tooltips no longer make the page wider than a narrow window.
+- A server error now shows its own message instead of saying the server can't be reached.
+
 ## [1.0.0] - 2026-10-31
 
 ### Added

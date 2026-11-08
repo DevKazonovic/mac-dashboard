@@ -3,6 +3,7 @@ const { execFile } = require('child_process')
 const ENV = { ...process.env, LC_ALL: 'C', LANG: 'C' }
 const TOP_UNITS = { B: 1, K: 1024, M: 1024 ** 2, G: 1024 ** 3, T: 1024 ** 4 }
 const DOCKER_UNITS = { B: 1, KiB: 1024, MiB: 1024 ** 2, GiB: 1024 ** 3, TiB: 1024 ** 4, kB: 1e3, KB: 1e3, MB: 1e6, GB: 1e9, TB: 1e12 }
+const UPTIME_UNITS = { second: 1, minute: 60, hour: 3600, day: 86400, week: 604800, month: 2592000, year: 31536000 }
 
 function run(command, args, options = {}) {
   return new Promise((resolve, reject) => {
@@ -122,6 +123,73 @@ function parseLaunchd(text) {
   return pids
 }
 
+function parseServices(text) {
+  const services = new Map()
+  for (const line of text.split('\n')) {
+    const match = /^\s*(\d+)\s+\S+\s+(\S+)\s*$/.exec(line)
+    if (match && Number(match[1]) > 0) services.set(Number(match[1]), match[2])
+  }
+  return services
+}
+
+function bundleRoot(file) {
+  const at = `${file}/`.indexOf('.app/')
+  return at < 0 ? null : file.slice(0, at + 4)
+}
+
+function parseForegroundApps(text) {
+  const bundles = new Set()
+  let bundle = null
+  for (const line of text.split('\n')) {
+    const found = /^\s*bundle path="(.*)"/.exec(line)
+    if (found) bundle = bundleRoot(found[1])
+    else if (/^\s*\d+\)\s/.test(line)) bundle = null
+    else if (bundle && /\bpid = \d+.*\btype="Foreground"/.test(line)) bundles.add(bundle)
+  }
+  return bundles
+}
+
+function parseListeners(text) {
+  const ports = new Map()
+  let pid = null
+  for (const line of text.split('\n')) {
+    if (line.startsWith('p')) {
+      pid = Number(line.slice(1))
+    } else if (line.startsWith('n') && pid) {
+      const match = /:(\d+)$/.exec(line)
+      if (!match) continue
+      if (!ports.has(pid)) ports.set(pid, new Set())
+      ports.get(pid).add(Number(match[1]))
+    }
+  }
+  return new Map([...ports].map(([owner, found]) => [owner, [...found].sort((a, b) => a - b)]))
+}
+
+function parseUptime(status) {
+  const match = /^Up (?:About )?(Less than a|an?|\d+) (second|minute|hour|day|week|month|year)s?/i.exec(String(status).trim())
+  if (!match) return 0
+  return (Number(match[1]) || 1) * UPTIME_UNITS[match[2].toLowerCase()]
+}
+
+function parseContainers(text) {
+  return text
+    .split('\n')
+    .filter((line) => line.trim())
+    .map((line) => {
+      const [name, image, state, status = '', ports = '', project = ''] = line.split('\t')
+      const health = /\(unhealthy\)/i.test(status) ? 'unhealthy' : /\(health: starting\)/i.test(status) ? 'starting' : ''
+      return {
+        name,
+        image,
+        project,
+        state: String(state).toLowerCase(),
+        health,
+        uptime: parseUptime(status),
+        ports: [...new Set([...ports.matchAll(/:(\d+(?:-\d+)?)->/g)].map((match) => match[1]))],
+      }
+    })
+}
+
 module.exports = {
   ENV,
   run,
@@ -136,4 +204,10 @@ module.exports = {
   parseDf,
   parseCwd,
   parseLaunchd,
+  parseServices,
+  bundleRoot,
+  parseForegroundApps,
+  parseListeners,
+  parseUptime,
+  parseContainers,
 }
